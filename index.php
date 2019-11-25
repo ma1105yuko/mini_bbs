@@ -1,22 +1,23 @@
-
+<!--リツイート用のshareテーブルをつくる-->
 <?php
 session_start();
 require('dbconnect.php');
 if (isset($_SESSION['id']) && $_SESSION['time'] + 3600 > time()) {
-	// ログインしている
-	$_SESSION['time'] = time();
-	$members = $db->prepare('SELECT * FROM members WHERE id=?');
-	$members->execute(array($_SESSION['id']));
-	$member = $members->fetch();
+// ログインしている
+    $_SESSION['time'] = time();
+    $members = $db->prepare('SELECT * FROM members WHERE id=?');
+    $members->execute(array($_SESSION['id']));
+    $member = $members->fetch();
 } else {
-	// ログインしていない
+// ログインしていない
     header('Location: login.php');
-    exit();
+exit();
 }
 
 
-//!!! リツイート機能のため追加箇所①　start　!!!//
+
 //投稿を記録する
+//!!! リツイート機能のため追加箇所①　start　!!!//
 if(!empty($_POST)) {
     if ($_POST['message'] != '') {
         $message = $db->prepare('INSERT INTO posts SET member_id=?, message=?, reply_post_id=?, retweet_id=?, created=NOW()'); //リツイートする投稿のidを記録する
@@ -26,12 +27,12 @@ if(!empty($_POST)) {
             $_POST['reply_post_id'],
             $_POST['retweet_id']//リツイートする投稿のidを記録する
         ));
+        //!!!　リツイート機能のため追加箇所　finish　!!!//
 
         header('Location: index.php');
         exit();
     }
 }
-//!!! リツイート機能のため追加箇所①　finish　!!!//
 
 //返信の場合
 if (isset($_REQUEST['res'])) {
@@ -60,28 +61,14 @@ $page = min($page, $maxPage);
 $start = ($page -1) * 5;
 
 
-//!!! いいね機能のため追加箇所①　start　!!!//
-//投稿を取得　 投稿IDといいねされた投稿IDをリレーション 
-$posts = $db->prepare('SELECT m.name, m.picture, p.*, COUNT(l.posts_id) AS like_cnt
-FROM members m, posts p LEFT JOIN likes l ON p.id=l.posts_id 
+//!!! いいね① リツイート②機能のため追加箇所　start　!!!//
+//投稿を取得　 投稿IDといいねされた投稿ID or リツイートされた投稿をリレーション 
+$posts = $db->prepare('SELECT m.name, m.picture, p.*, COUNT(l.posts_id) AS like_cnt, COUNT(s.posts_id) AS share_cnt
+FROM members m, posts p LEFT JOIN likes l ON p.id=l.posts_id LEFT JOIN share s ON p.id=s.posts_id
 WHERE m.id=p.member_id GROUP BY p.id ORDER BY p.created DESC LIMIT ?, 5');
 $posts->bindParam(1, $start, PDO::PARAM_INT);
 $posts->execute();
-//!!! いいね機能のため追加箇所①　finish　!!!//
-
-
-//!!! リツイート機能のため追加箇所②　start　!!!//
-//リツイートする投稿を取り出す
-if (isset($_REQUEST['ret'])) {
-    $retweet = $db->prepare('SELECT m.name, m.picture, p.* 
-    FROM members m, posts p WHERE m.id=p.member_id AND p.id=? ORDER BY p.created DESC');
-    $retweet->execute(array($_REQUEST['ret']));
-
-    $retweets = $retweet->fetch();
-    $share =$retweets['name'] . 'さんの投稿をリツイート' . ': ' . $retweets['message'];
-}
-//!!! リツイート機能のため追加箇所②　finish　!!!//
-
+//!!! いいね　リツイート機能のため追加箇所　finish　!!!//
 
 // htmlspecialcharsのショートカット
 function h($value) {
@@ -116,11 +103,8 @@ function makeLink($value) {
             <dl>
                 <dt><?php echo h($member['name']); ?>さん、メッセージをどうぞ</dt>
                 <dd>
-                <!--//!!! リツイート機能のため追加箇所③　start　!!!//-->
-                <textarea name="message" cols="50" rows="5"><?php echo h($message); ?><?php echo h($share); ?></textarea><!--リツイート用に取り出したメッセージをtextarea初期値に設定-->
+                <textarea name="message" cols="50" rows="5"><?php echo h($message); ?></textarea>
                 <input type="hidden" name="reply_post_id" value="<?php echo h($_REQUEST['res']); ?>" />
-                <input type="hidden" name="retweet_id" value="<?php echo h($_REQUEST['ret']); ?>" /> <!--リツイートする投稿のidを記録する-->
-                <!--//!!! リツイート機能のため追加箇所③　finish　!!!//-->
                 </dd>
             </dl>
             <div>
@@ -165,15 +149,10 @@ function makeLink($value) {
 
 
         <!-- リツイート画面表示部分 -->
-        [<a href="index.php?ret=<?php echo h($post['id']); ?>">リツイート</a>]
+        [<a href="share.php?ret=<?php echo h($post['id']); ?>">リツイート</a>]
         <!-- リツイート数表示部分 -->
-        <?php
-        $reposts = $db->prepare('SELECT COUNT(*) AS share_cnt FROM posts WHERE retweet_id=?');
         
-        $reposts->execute(array($post['id']));
-        $repost = $reposts->fetch();
-        ?>
-        [<span><?php echo h($repost['share_cnt']); ?></span>]
+        [<span><?php echo h($post['share_cnt']); ?></span>]
         </p>
         </div>
     

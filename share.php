@@ -13,7 +13,7 @@ if (isset($_SESSION['id']) && isset($_REQUEST['ret'])) {
     ));
     
     $share = $shares->fetch();
-   
+   //shareテーブルに、「ログインしているユーザー」と「リツイート元の投稿id」をインサート
     if (empty($share['cnt'])) {
         $share = $db->prepare('INSERT INTO share SET posts_id=?, member_id=?'); 
         $share->execute(array(
@@ -27,7 +27,7 @@ if (isset($_SESSION['id']) && isset($_REQUEST['ret'])) {
 
         $repost = $reposts->fetch();
         $repost_member = $repost['name'] .'さんがリツイート: ' . $repost['message'];
-    
+        //postsテーブルに「ログインしているユーザー」と「リツイート用メッセージ」と「リツイート元の投稿id」をインサート
         $repost_message = $db->prepare('INSERT INTO posts SET member_id=?, message=?, retweet_id=?, created=NOW()');
         $repost_message->execute(array(
             $_SESSION['id'],
@@ -35,23 +35,25 @@ if (isset($_SESSION['id']) && isset($_REQUEST['ret'])) {
             $_REQUEST['ret']
         ));
     
-        
+    //もう一度リツイートをクリックすると、２つのテーブルからデータが消えてカウントも−１される    
     } else {
+        
+        $repost_message = $db->prepare('DELETE FROM posts WHERE member_id=? AND retweet_id=?');
+        $repost_message->execute(array(
+            $_SESSION['id'],
+            $_REQUEST['ret']
+        ));
         $share = $db->prepare('DELETE FROM share WHERE posts_id=? AND member_id=?');
         $share->execute(array(
             $_REQUEST['ret'],
             $_SESSION['id']
         ));
 
-        $repost_message = $db->prepare('DELETE FROM posts WHERE member_id=? AND retweet_id=? AND message=?');
-        $repost_message->execute(array(
-            $_SESSION['id'],
-            $_REQUEST['ret'],
-            $repost_member
-        ));
+        
     }
 }
 
 
-header('Location: index.php'); exit();
+header('Location: index.php'); 
+exit();
 ?>
