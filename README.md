@@ -1,6 +1,14 @@
 # mini_bbs
  lesson4
+NEW!
+11/25
+リツイート機能　パターン２　（完成）
+index.php(旧index_pattern2.php)
+share.php
+こちらをリツイート機能完成品とします。
 
+
+11/23
 いいね機能
 index.php
 like.php
